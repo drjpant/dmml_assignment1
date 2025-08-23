@@ -13,7 +13,7 @@ latest_folder = max(folders, key=lambda f: os.path.getmtime(os.path.join(root_pa
 print("📂 Latest Folder:", latest_folder)
 print("📅 Timestamp:", os.path.getmtime(os.path.join(root_path, latest_folder)))
 
-csv_path = os.path.join(latest_folder, 'customer_churn_dataset-training-master.csv')
+csv_path = os.path.join(root_path,latest_folder, 'customer_churn_dataset-training-master.csv')
 print("📑 Reading file:", csv_path)
 
 # Step 3: Load CSV into pandas
@@ -59,3 +59,18 @@ for col in num_cols:
     print(f"{col}: {len(outliers)} outliers")
 
 print("\n✅ Validation Complete!")
+
+# -------------------------------
+# Define Silver Layer Save Path
+# -------------------------------
+silver_root = ".\silver_layer"
+
+# Keep same folder structure under silver_layer
+silver_folder = os.path.join(silver_root, latest_folder)
+os.makedirs(silver_folder, exist_ok=True)
+
+# Save file with same name
+silver_file = os.path.join(silver_folder, "customer_churn_dataset-training-master.csv")
+df.to_csv(silver_file, index=False)
+
+print(f"✅ DataFrame saved to: {silver_file}")
