@@ -57,7 +57,7 @@ df = df.dropna()
 df.isna().sum()
 
 numerical_cols = df.select_dtypes(include=['int64', 'float64'])
-print(f'dheeraj: {numerical_cols}')
+print(f'numerical_cols: {numerical_cols}')
 
 
 
@@ -70,7 +70,7 @@ for col in numerical_cols:
     df[col] = df[col].fillna(df[col].median())
 
 categorical_cols = df.select_dtypes(include=['object'])
-print(f'dheerajpant: {numerical_cols}')
+print(f'object_cols: {numerical_cols}')
 
 for col in categorical_cols:
     print(col)
@@ -131,6 +131,6 @@ os.makedirs(gold_folder, exist_ok=True)
 gold_file = os.path.join(gold_folder, "customer_churn_dataset-training-master.csv")
 df.to_csv(gold_file, index=False)
 
-print(f"✅ DataFrame saved to: {silver_file}")
+print(f"✅ DataFrame saved to: {gold_file}")
 
 

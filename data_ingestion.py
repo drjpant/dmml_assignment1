@@ -1,11 +1,11 @@
 import os
 from datetime import datetime
 from kaggle.api.kaggle_api_extended import KaggleApi
-print('hellp')
+
 # 🔁 STEP 1: Hardcode your credentials
 kaggle_username = 'drajpant'  # <-- Replace with your username
 kaggle_key = 'eae57c42a7b8e25cb0b51d2e01b9a220'        # <-- Replace with your API key
-print('i m here')
+
 # 🔁 STEP 2: Set environment variables programmatically
 os.environ['KAGGLE_USERNAME'] = kaggle_username
 os.environ['KAGGLE_KEY'] = kaggle_key

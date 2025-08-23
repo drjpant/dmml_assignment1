@@ -78,6 +78,25 @@ print("✅ MLflow run completed!")
 
 
 
-print(f"Accuracy: {accuracy_score(y_pred, y_test) * 100:.2f}%")
+# Accuracy
+print(f"Accuracy: {accuracy_score(y_test, y_pred) * 100:.2f}%")
 
-print(classification_report(y_pred, y_test))
+# Precision
+print(f"Precision: {precision_score(y_test, y_pred, average='binary'):.2f}")
+
+# Recall
+print(f"Recall: {recall_score(y_test, y_pred, average='binary'):.2f}")
+
+# F1-score
+print(f"F1 Score: {f1_score(y_test, y_pred, average='binary'):.2f}")
+
+# ROC-AUC (works for binary; for multiclass use average='macro')
+print(f"ROC-AUC: {roc_auc_score(y_test, y_pred):.2f}")
+
+# Confusion Matrix
+print("Confusion Matrix:")
+print(confusion_matrix(y_test, y_pred))
+
+# Full classification report (includes precision, recall, f1 per class)
+print("\nClassification Report:")
+print(classification_report(y_test, y_pred))
