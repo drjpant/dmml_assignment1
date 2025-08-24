@@ -1,136 +1,130 @@
 import os
 import pandas as pd
-
-# Path to your Kaggle dataset root
-root_path = "./silver_layer"
-
-# List all folders
-folders = [f for f in os.listdir(root_path) if os.path.isdir(os.path.join(root_path, f))]
-
-# Get latest folder by last modified time
-latest_folder = max(folders, key=lambda f: os.path.getmtime(os.path.join(root_path, f)))
-
-print("📂 Latest Folder:", latest_folder)
-print("📅 Timestamp:", os.path.getmtime(os.path.join(root_path, latest_folder)))
-
-csv_path = os.path.join(root_path,latest_folder, 'customer_churn_dataset-training-master.csv')
-print("📑 Reading file:", csv_path)
-
-import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import mlflow
 import mlflow.sklearn
-from sklearn.preprocessing import StandardScaler
-from sklearn.preprocessing import LabelEncoder
-from sklearn.preprocessing import StandardScaler
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import StandardScaler, LabelEncoder, MinMaxScaler
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, confusion_matrix, classification_report, roc_auc_score, roc_curve,precision_score, recall_score, f1_score
+from sklearn.metrics import (accuracy_score, confusion_matrix, classification_report,
+                             roc_auc_score, roc_curve, precision_score, recall_score, f1_score)
 
+try:
+    # -------------------------------
+    # 1. Get Latest Silver Layer Folder
+    # -------------------------------
+    root_path = "./silver_layer"
 
+    if not os.path.exists(root_path):
+        raise FileNotFoundError(f"❌ Root path not found: {root_path}")
 
-df = pd.read_csv(csv_path)
-df
+    folders = [f for f in os.listdir(root_path) if os.path.isdir(os.path.join(root_path, f))]
+    if not folders:
+        raise FileNotFoundError("❌ No folders found in silver_layer directory")
 
-df.head(5)
+    latest_folder = max(folders, key=lambda f: os.path.getmtime(os.path.join(root_path, f)))
+    print("📂 Latest Folder:", latest_folder)
+    print("📅 Timestamp:", os.path.getmtime(os.path.join(root_path, latest_folder)))
 
-df.tail()
+    csv_path = os.path.join(root_path, latest_folder, 'customer_churn_dataset-training-master.csv')
+    if not os.path.exists(csv_path):
+        raise FileNotFoundError(f"❌ CSV file not found: {csv_path}")
 
-df.sample()
+    print("📑 Reading file:", csv_path)
+    df = pd.read_csv(csv_path)
 
-df.info()
+    # -------------------------------
+    # 2. Data Inspection
+    # -------------------------------
+    print(df.head(5))
+    print(df.tail(2))
+    print(df.sample(2))
+    print(df.info())
+    print("Shape:", df.shape)
+    print(df.describe().T)
+    print("Missing Values:\n", df.isna().sum())
+    print("Null %:\n", (df.isna().sum() / len(df)) * 100)
 
-df.shape
+    # -------------------------------
+    # 3. Handle Missing Values
+    # -------------------------------
+    df = df.dropna()  # Drop rows with missing values
+    print("✅ Nulls after dropna:\n", df.isna().sum())
 
-df.describe().T
+    numerical_cols = df.select_dtypes(include=['int64', 'float64']).columns
+    categorical_cols = df.select_dtypes(include=['object']).columns
 
-df.isna().sum()
+    for col in numerical_cols:
+        df[col] = df[col].fillna(df[col].mean())
 
-# Calculate percentage of null values
-(df.isna().sum() / len(df)) * 100
+    for col in categorical_cols:
+        df[col] = df[col].fillna(df[col].mode()[0])
 
-df = df.dropna()
+    print("✅ Missing values handled")
 
-df.isna().sum()
+    # -------------------------------
+    # 4. Remove Duplicates & Drop ID
+    # -------------------------------
+    print("📌 Duplicate Rows Before:", df.duplicated().sum())
+    df = df.drop_duplicates()
+    if 'CustomerID' in df.columns:
+        df = df.drop(['CustomerID'], axis=1)
+    print("✅ Duplicates removed & CustomerID dropped")
 
-numerical_cols = df.select_dtypes(include=['int64', 'float64'])
-print(f'numerical_cols: {numerical_cols}')
+    # -------------------------------
+    # 5. Encoding
+    # -------------------------------
+    le = LabelEncoder()
+    if 'Gender' in df.columns:
+        df['Gender'] = le.fit_transform(df['Gender'])
+    if 'Subscription Type' in df.columns:
+        df['Subscription Type'] = le.fit_transform(df['Subscription Type'])
 
+    if 'Contract Length' in df.columns:
+        df = pd.get_dummies(df, columns=['Contract Length'], drop_first=True, dtype=int)
 
+    print("✅ Encoding complete")
 
-for col in numerical_cols:
-    print(col)
-    df[col] = df[col].fillna(df[col].mean())
+    # -------------------------------
+    # 6. Scaling
+    # -------------------------------
+    numerical_cols = ['Gender', 'Subscription Type']
+    if 'Contract Length_Monthly' in df.columns:
+        numerical_cols.append('Contract Length_Monthly')
+    if 'Contract Length_Quarterly' in df.columns:
+        numerical_cols.append('Contract Length_Quarterly')
 
-    df[col] = df[col].fillna(df[col].mode()[0])   # for categories
+    scaler = StandardScaler()
+    df[numerical_cols] = scaler.fit_transform(df[numerical_cols])
 
-    df[col] = df[col].fillna(df[col].median())
+    scaler = MinMaxScaler()
+    df[numerical_cols] = scaler.fit_transform(df[numerical_cols])
 
-categorical_cols = df.select_dtypes(include=['object'])
-print(f'object_cols: {numerical_cols}')
+    print("✅ Scaling complete")
 
-for col in categorical_cols:
-    print(col)
-    df[col] = df[col].fillna(df[col].mode()[0])
-df.info()
-df.duplicated().sum()
+    # -------------------------------
+    # 7. Feature Engineering
+    # -------------------------------
+    if 'Last Interaction' in df.columns:
+        df['RecentlyActive'] = (df['Last Interaction'] < 5).astype(int)
+    if 'Support Calls' in df.columns:
+        df['HighSupportUser'] = (df['Support Calls'] > 5).astype(int)
 
-df = df.drop(['CustomerID'], axis=1)
+    print("✅ Feature Engineering complete")
 
-df.head()
+    # -------------------------------
+    # 8. Save to Gold Layer
+    # -------------------------------
+    gold_root = "./gold_layer"
+    gold_folder = os.path.join(gold_root, latest_folder)
+    os.makedirs(gold_folder, exist_ok=True)
 
+    gold_file = os.path.join(gold_folder, "customer_churn_dataset-training-master.csv")
+    df.to_csv(gold_file, index=False)
 
-le = LabelEncoder()
-df['Gender'] = le.fit_transform(df['Gender'])
+    print(f"✅ DataFrame saved to: {gold_file}")
 
-df['Subscription Type'] = le.fit_transform(df['Subscription Type'])
-df.info()
-df.head()
-
-df = pd.get_dummies(df, columns=['Contract Length'], drop_first=True, dtype=int)
-
-df.head()
-
-df.info()
-
-
-numerical_cols=['Gender','Subscription Type','Contract Length_Monthly','Contract Length_Quarterly']
-scaler = StandardScaler()
-df[numerical_cols] = scaler.fit_transform(df[numerical_cols])
-
-
-
-
-
-scaler = MinMaxScaler()
-df[numerical_cols] = scaler.fit_transform(df[numerical_cols])
-
-df.info()
-
-df.describe().T
-
-df['RecentlyActive'] = (df['Last Interaction'] < 5).astype(int)
-
-df['HighSupportUser'] = (df['Support Calls'] > 5).astype(int)
-
-df.head()
-
-# -------------------------------
-# Define Silver Layer Save Path
-# -------------------------------
-gold_root = ".\gold_layer"
-
-# Keep same folder structure under silver_layer
-gold_folder = os.path.join(gold_root, latest_folder)
-os.makedirs(gold_folder, exist_ok=True)
-
-# Save file with same name
-gold_file = os.path.join(gold_folder, "customer_churn_dataset-training-master.csv")
-df.to_csv(gold_file, index=False)
-
-print(f"✅ DataFrame saved to: {gold_file}")
-
-
+except Exception as e:
+    print(f"❌ Error occurred: {e}")
